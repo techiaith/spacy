@@ -15,29 +15,29 @@ class WelshLemmatizer(Lemmatizer):
     the lookup table.
     """
 
+    _lookups_config_categories = (
+        "adj",
+        "adp",
+        "adv",
+        "aux",
+        "conj"
+        "det",
+        "intj",
+        "noun",
+        "num",
+        "pron",
+        "propn",
+        "verb"
+    )
+
     @classmethod
     def get_lookups_config(cls, mode: str) -> Tuple[List[str], List[str]]:
-        if mode == "rule":
-            # TODO: implement pos_tag based lookups
+        if mode == "lookup":
             required = [
-                "lemma_lookup", "lemma_rules", "lemma_exc", "lemma_index"
+                f"lemma_lookup_{cat}" for cat in cls._required_lookup_categories
             ]
-        elif mode == "lookup":
-            required = [
-                "lemma_adj",
-                "lemma_adp",
-                "lemma_adv",
-                "lemma_aux",
-                "lemma_conj",
-                "lemma_det",
-                "lemma_intj",
-                "lemma_noun",
-                "lemma_num",
-                "lemma_pron",
-                "lemma_propn",
-                "lemma_verb"
-            ]
-        return (required, [])
+            return (required, [])
+        return super().get_lookups_config(mode)
             
     def rule_lemmatize(self, token: Token) -> List[str]:
         cache_key = (token.orth, token.pos)
