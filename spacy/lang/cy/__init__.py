@@ -14,10 +14,6 @@ from .punctuation import (
 from .stop_words import STOP_WORDS
 from .tokenizer_exceptions import TOKENIZER_EXCEPTIONS
 
-DEFAULT_CONFIG = """\
-[nlp]
-pipeline = ["lemmatizer"]
-"""
 
 class WelshDefaults(BaseDefaults):
     tokenizer_exceptions = TOKENIZER_EXCEPTIONS
@@ -26,8 +22,6 @@ class WelshDefaults(BaseDefaults):
     suffixes = TOKENIZER_SUFFIXES
     lex_attr_getters = LEX_ATTRS
     stop_words = STOP_WORDS
-    enable = ("lemmatizer",)
-    config = Config().from_str(DEFAULT_CONFIG).merge(BaseDefaults.config)
 
 
 class Welsh(Language):
