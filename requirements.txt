@@ -38,3 +38,4 @@ types-setuptools>=57.0.0
 types-requests
 types-setuptools>=57.0.0
 black==22.3.0
+-e git+ssh://git@github.com/techiaith/spacy-lookups-data.git@welsh#egg=spacy-lookups-data
