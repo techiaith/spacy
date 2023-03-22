@@ -1,13 +1,31 @@
 from ...attrs import LIKE_NUM
 
-# Angen deall sut i drin rhifau aml-air
-# Angen rhifau benywaidd
+# TODO: Deal with multi word numbers such as 'un ar ddeg' (eleven)
+
 _num_words = (
-    'sero', 'un', 'dau', 'tree', 'pedwar', 'pump', 'chwech', 'saith',
-    'wyth', 'naw', 'deg', 'deuddeg', 'pymtheg', 'deunaw', 'ugain',
-    'deugain', 'trigain',
-    'can', 'cant', 'mil', 'miliwn', 'biliwn', 'triliwn', 'cwadriliwn',
-    'gajiliwn', 'basiliwn')
+    'sero',
+    'un',
+    'dau', 'ddau', 'nau', 'dwy', 'ddwy', 'nwy',
+    'tri', 'dri', 'thri', 'tair', 'dair', 'thair',
+    'pedwar', 'bedwar', 'phedwar', 'pedair', 'bedair', 'phedair',
+    'pump', 'bump', 'phump', 'pum', 'bum', 'phum',
+    'chwech', 'chwe',
+    'saith',
+    'wyth',
+    'naw',
+    'deg', 'ddeg', 'deng', 'ddeng',
+    'deuddeg', 'ddeuddeg', 'deuddeng', 'ddeuddeng',
+    'pymtheg', 'bymtheg', 'phymtheg', 'pymtheng', 'bymtheng', 'phymtheng',
+    'deunaw', 'ddeunaw', 'neunaw',
+    'ugain', 'hugain',
+    'deugain', 'ddeugain', 'neugain',
+    'trigain', 'drigain', 'thrigain',
+    'cant', 'gant', 'chant', 'can', 'gan', 'chan',
+    'mil', 'fil',
+    'miliwn', 'filiwn',
+    'biliwn',
+    'triliwn', 'driliwn', 'thriliwn',
+    'cwadriliwn', 'gwadriliwn', 'chwadriliwin')
 
 
 def like_num(text):

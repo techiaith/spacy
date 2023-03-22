@@ -1,97 +1,90 @@
-from typing import List, Tuple
+from typing import List, Dict, Tuple
 
 from ...pipeline import Lemmatizer
 from ...tokens import Token
 
 
 class WelshLemmatizer(Lemmatizer):
-    """
-    Copied from French Lemmatizer
-    Welsh language lemmatizer applies the default rule based lemmatization
-    procedure with some modifications for better Welsh language support.
-
-    The parts of speech 'ADV', 'PRON', 'DET', 'ADP' and 'AUX' are added to use
-    the rule-based lemmatization. As a last resort, the lemmatizer checks in
-    the lookup table.
-    """
-
-    _lookups_config_categories = (
-        "adj",
-        "adp",
-        "adv",
-        "aux",
-        "conj"
-        "det",
-        "intj",
-        "noun",
-        "num",
-        "pron",
-        "propn",
-        "verb"
-    )
+    """XXXX"""
 
     @classmethod
     def get_lookups_config(cls, mode: str) -> Tuple[List[str], List[str]]:
         if mode == "lookup":
             required = [
-                f"lemma_lookup_{cat}" for cat in cls._required_lookup_categories
+                "lemma_lookup_adj",
+                "lemma_lookup_adp",
+                "lemma_lookup_adv",
+                "lemma_lookup_aux",
+                "lemma_lookup_det",
+                "lemma_lookup_noun",
+                "lemma_lookup_num",
+                "lemma_lookup_pron",
+                "lemma_lookup_propn",
+                "lemma_lookup_verb",
+                #"lemma_lookup_other",
+                #"lemma_lookup",
             ]
             return (required, [])
-        return super().get_lookups_config(mode)
-            
-    def rule_lemmatize(self, token: Token) -> List[str]:
-        cache_key = (token.orth, token.pos)
-        if cache_key in self.cache:
-            return self.cache[cache_key]
-        string = token.text
-        univ_pos = token.pos_.lower()
-        if univ_pos in ("", "eol", "space"):
-            return [string.lower()]
-        elif "lemma_rules" not in self.lookups or univ_pos not in (
-            "noun",
-            "verb",
-            "adj",
-            "adp",
-            "adv",
-            "aux",
-            "cconj",
-            "det",
-            "pron",
-            "punct",
-            "sconj",
-        ):
-            return self.lookup_lemmatize(token)
-        index_table = self.lookups.get_table("lemma_index", {})
-        exc_table = self.lookups.get_table("lemma_exc", {})
-        rules_table = self.lookups.get_table("lemma_rules", {})
-        lookup_table = self.lookups.get_table("lemma_lookup", {})
-        index = index_table.get(univ_pos, {})
-        exceptions = exc_table.get(univ_pos, {})
-        rules = rules_table.get(univ_pos, [])
-        string = string.lower()
-        forms = []
-        if string in index:
-            forms.append(string)
-            self.cache[cache_key] = forms
-            return forms
-        forms.extend(exceptions.get(string, []))
-        oov_forms = []
-        if not forms:
-            for old, new in rules:
-                if string.endswith(old):
-                    form = string[: len(string) - len(old)] + new
-                    if not form:
-                        pass
-                    elif form in index or not form.isalpha():
-                        forms.append(form)
-                    else:
-                        oov_forms.append(form)
-        if not forms:
-            forms.extend(oov_forms)
+        else:
+            return super().get_lookups_config(mode)
 
-        # use lookups, and fall back to the token itself
-        if not forms:
-            forms.append(lookup_table.get(string, [string])[0])
-        forms = list(dict.fromkeys(forms))
-        self.cache[cache_key] = forms
-        return forms
+    def lookup_lemmatize(self, token: Token) -> List[str]:
+        string = token.text
+        univ_pos = token.tag_
+        lookup_pos = univ_pos.lower()
+        lookup_table = self.lookups.get_table("lemma_lookup_" + lookup_pos, {})
+        if univ_pos == "NOUN":
+            return self.lemmatize_noun(string, univ_pos, lookup_table)
+        else:
+            if univ_pos != "PROPN":
+                string = string.lower()
+            if univ_pos == "DET":
+                return self.lemmatize_det(string, univ_pos, lookup_table)
+            elif univ_pos == "PRON":
+                return self.lemmatize_pron(string, univ_pos, lookup_table)
+            elif univ_pos == "ADP":
+                return self.lemmatize_adp(string, univ_pos, lookup_table)
+            elif univ_pos == "ADJ":
+                return self.lemmatize_adj(string, univ_pos, lookup_table)
+            else:
+                lemma = lookup_table.get(string, "")
+        #if not lemma:
+        #    lookup_table = self.lookups.get_table("lemma_lookup_other")
+        #    lemma = lookup_table.get(string, "")
+        #if not lemma:
+        #    lookup_table = self.lookups.get_table(
+        #        "lemma_lookup"
+        #    )  # "legacy" lookup table
+        #    lemma = lookup_table.get(string, string.lower())
+        if not lemma:
+            lemma = token.text
+        return [lemma]
+        
+        
+        
+    def lemmatize_det(
+        self, string: str, univ_pos: str, lookup_table: Dict[str, str]
+    ) -> List[str]:
+        return [lookup_table.get(string, string)]
+
+    def lemmatize_pron(
+        self, string: str, univ_pos: str, lookup_table: Dict[str, str]
+    ) -> List[str]:
+        lemma = lookup_table.get(string, string)
+        return [lemma]
+
+    def lemmatize_adp(
+        self, string: str, univ_pos: str, lookup_table: Dict[str, str]
+    ) -> List[str]:
+        return [lookup_table.get(string, string)]
+
+    def lemmatize_adj(
+        self, string: str, univ_pos: str, lookup_table: Dict[str, str]
+    ) -> List[str]:
+        lemma = lookup_table.get(string, string)
+        return [lemma]
+
+    def lemmatize_noun(
+        self, string: str, univ_pos: str, lookup_table: Dict[str, str]
+    ) -> List[str]:
+        return [lookup_table.get(string, string)]

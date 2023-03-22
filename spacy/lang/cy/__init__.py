@@ -1,8 +1,6 @@
 from typing import Callable, Optional
-
 from thinc.api import Config, Model
 
-# from .syntax_iterators import SYNTAX_ITERATORS
 from ...language import BaseDefaults, Language
 from .lemmatizer import WelshLemmatizer
 from .lex_attrs import LEX_ATTRS
