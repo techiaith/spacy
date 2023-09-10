@@ -25,7 +25,10 @@ and call the package's own `load()` method. If a pipeline is loaded from a path,
 spaCy will assume it's a data directory, load its
 [`config.cfg`](/api/data-formats#config) and use the language and pipeline
 information to construct the `Language` class. The data will be loaded in via
-[`Language.from_disk`](/api/language#from_disk).
+[`Language.from_disk`](/api/language#from_disk). Loading a pipeline from a
+package will also import any custom code, if present, whereas loading from a
+directory does not. For these cases, you need to manually import your custom
+code.
 
 <Infobox variant="warning" title="Changed in v3.0">
 
@@ -65,7 +68,7 @@ weights, and returns it.
 cls = spacy.util.get_lang_class(lang)  # 1. Get Language class, e.g. English
 nlp = cls()                            # 2. Initialize it
 for name in pipeline:
-    nlp.add_pipe(name)                 # 3. Add the component to the pipeline
+    nlp.add_pipe(name, config={...})   # 3. Add the component to the pipeline
 nlp.from_disk(data_path)               # 4. Load in the binary data
 ```
 
@@ -291,7 +294,7 @@ the `manual=True` argument in `displacy.render`.
 
 | Name        | Description                                                         |
 | ----------- | ------------------------------------------------------------------- |
-| `orig_doc`  | Doc to parse dependencies. ~~Doc~~                                  |
+| `orig_doc`  | Doc or span to parse dependencies. ~~Union[Doc, Span]~~             |
 | `options`   | Dependency parse specific visualisation options. ~~Dict[str, Any]~~ |
 | **RETURNS** | Generated dependency parse keyed by words and arcs. ~~dict~~        |
 
@@ -340,6 +343,130 @@ use with the `manual=True` argument in `displacy.render`.
 | `options`   | Span-specific visualisation options. ~~Dict[str, Any]~~             |
 | **RETURNS** | Generated entities keyed by text (original text) and ents. ~~dict~~ |
 
+### Visualizer data structures {id="displacy_structures"}
+
+You can use displaCy's data format to manually render data. This can be useful
+if you want to visualize output from other libraries. You can find examples of
+displaCy's different data formats below.
+
+> #### DEP example data structure
+>
+> ```json
+> {
+>   "words": [
+>     { "text": "This", "tag": "DT" },
+>     { "text": "is", "tag": "VBZ" },
+>     { "text": "a", "tag": "DT" },
+>     { "text": "sentence", "tag": "NN" }
+>   ],
+>   "arcs": [
+>     { "start": 0, "end": 1, "label": "nsubj", "dir": "left" },
+>     { "start": 2, "end": 3, "label": "det", "dir": "left" },
+>     { "start": 1, "end": 3, "label": "attr", "dir": "right" }
+>   ]
+> }
+> ```
+
+#### Dependency Visualizer data structure {id="structure-dep"}
+
+| Dictionary Key | Description                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `words`        | List of dictionaries describing a word token (see structure below). ~~List[Dict[str, Any]]~~                |
+| `arcs`         | List of dictionaries describing the relations between words (see structure below). ~~List[Dict[str, Any]]~~ |
+| _Optional_     |                                                                                                             |
+| `title`        | Title of the visualization. ~~Optional[str]~~                                                               |
+| `settings`     | Dependency Visualizer options (see [here](/api/top-level#displacy_options)). ~~Dict[str, Any]~~             |
+
+<Accordion title="Words data structure">
+
+| Dictionary Key | Description                              |
+| -------------- | ---------------------------------------- |
+| `text`         | Text content of the word. ~~str~~        |
+| `tag`          | Fine-grained part-of-speech. ~~str~~     |
+| `lemma`        | Base form of the word. ~~Optional[str]~~ |
+
+</Accordion>
+
+<Accordion title="Arcs data structure">
+
+| Dictionary Key | Description                                          |
+| -------------- | ---------------------------------------------------- |
+| `start`        | The index of the starting token. ~~int~~             |
+| `end`          | The index of the ending token. ~~int~~               |
+| `label`        | The type of dependency relation. ~~str~~             |
+| `dir`          | Direction of the relation (`left`, `right`). ~~str~~ |
+
+</Accordion>
+
+> #### ENT example data structure
+>
+> ```json
+> {
+>   "text": "But Google is starting from behind.",
+>   "ents": [{ "start": 4, "end": 10, "label": "ORG" }]
+> }
+> ```
+
+#### Named Entity Recognition data structure {id="structure-ent"}
+
+| Dictionary Key | Description                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| `text`         | String representation of the document text. ~~str~~                                         |
+| `ents`         | List of dictionaries describing entities (see structure below). ~~List[Dict[str, Any]]~~    |
+| _Optional_     |                                                                                             |
+| `title`        | Title of the visualization. ~~Optional[str]~~                                               |
+| `settings`     | Entity Visualizer options (see [here](/api/top-level#displacy_options)). ~~Dict[str, Any]~~ |
+
+<Accordion title="Ents data structure">
+
+| Dictionary Key | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
+| `start`        | The index of the first character of the entity. ~~int~~                |
+| `end`          | The index of the last character of the entity. (not inclusive) ~~int~~ |
+| `label`        | Label attached to the entity. ~~str~~                                  |
+| _Optional_     |                                                                        |
+| `kb_id`        | `KnowledgeBase` ID. ~~str~~                                            |
+| `kb_url`       | `KnowledgeBase` URL. ~~str~~                                           |
+
+</Accordion>
+
+> #### SPAN example data structure
+>
+> ```json
+> {
+>   "text": "Welcome to the Bank of China.",
+>   "spans": [
+>     { "start_token": 3, "end_token": 6, "label": "ORG" },
+>     { "start_token": 5, "end_token": 6, "label": "GPE" }
+>   ],
+>   "tokens": ["Welcome", "to", "the", "Bank", "of", "China", "."]
+> }
+> ```
+
+#### Span Classification data structure {id="structure-span"}
+
+| Dictionary Key | Description                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| `text`         | String representation of the document text. ~~str~~                                       |
+| `spans`        | List of dictionaries describing spans (see structure below). ~~List[Dict[str, Any]]~~     |
+| `tokens`       | List of word tokens. ~~List[str]~~                                                        |
+| _Optional_     |                                                                                           |
+| `title`        | Title of the visualization. ~~Optional[str]~~                                             |
+| `settings`     | Span Visualizer options (see [here](/api/top-level#displacy_options)). ~~Dict[str, Any]~~ |
+
+<Accordion title="Spans data structure">
+
+| Dictionary Key | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `start_token`  | The index of the first token of the span in `tokens`. ~~int~~ |
+| `end_token`    | The index of the last token of the span in `tokens`. ~~int~~  |
+| `label`        | Label attached to the span. ~~str~~                           |
+| _Optional_     |                                                               |
+| `kb_id`        | `KnowledgeBase` ID. ~~str~~                                   |
+| `kb_url`       | `KnowledgeBase` URL. ~~str~~                                  |
+
+</Accordion>
+
 ### Visualizer options {id="displacy_options"}
 
 The `options` argument lets you specify additional settings for each visualizer.
@@ -354,22 +481,22 @@ If a setting is not present in the options, the default value will be used.
 > displacy.serve(doc, style="dep", options=options)
 > ```
 
-| Name               | Description                                                                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fine_grained`     | Use fine-grained part-of-speech tags (`Token.tag_`) instead of coarse-grained tags (`Token.pos_`). Defaults to `False`. ~~bool~~             |
-| `add_lemma`        | Print the lemmas in a separate row below the token texts. Defaults to `False`. ~~bool~~                                                      |
-| `collapse_punct`   | Attach punctuation to tokens. Can make the parse more readable, as it prevents long arcs to attach punctuation. Defaults to `True`. ~~bool~~ |
-| `collapse_phrases` | Merge noun phrases into one token. Defaults to `False`. ~~bool~~                                                                             |
-| `compact`          | "Compact mode" with square arrows that takes up less space. Defaults to `False`. ~~bool~~                                                    |
-| `color`            | Text color (HEX, RGB or color names). Defaults to `"#000000"`. ~~str~~                                                                       |
-| `bg`               | Background color (HEX, RGB or color names). Defaults to `"#ffffff"`. ~~str~~                                                                 |
-| `font`             | Font name or font family for all text. Defaults to `"Arial"`. ~~str~~                                                                        |
-| `offset_x`         | Spacing on left side of the SVG in px. Defaults to `50`. ~~int~~                                                                             |
-| `arrow_stroke`     | Width of arrow path in px. Defaults to `2`. ~~int~~                                                                                          |
-| `arrow_width`      | Width of arrow head in px. Defaults to `10` in regular mode and `8` in compact mode. ~~int~~                                                 |
-| `arrow_spacing`    | Spacing between arrows in px to avoid overlaps. Defaults to `20` in regular mode and `12` in compact mode. ~~int~~                           |
-| `word_spacing`     | Vertical spacing between words and arcs in px. Defaults to `45`. ~~int~~                                                                     |
-| `distance`         | Distance between words in px. Defaults to `175` in regular mode and `150` in compact mode. ~~int~~                                           |
+| Name               | Description                                                                                                                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fine_grained`     | Use fine-grained part-of-speech tags (`Token.tag_`) instead of coarse-grained tags (`Token.pos_`). Defaults to `False`. ~~bool~~                                                                                                              |
+| `add_lemma`        | Print the lemmas in a separate row below the token texts. Defaults to `False`. ~~bool~~                                                                                                                                                       |
+| `collapse_punct`   | Attach punctuation to tokens. Can make the parse more readable, as it prevents long arcs to attach punctuation. Defaults to `True`. ~~bool~~                                                                                                  |
+| `collapse_phrases` | Merge noun phrases into one token. Defaults to `False`. ~~bool~~                                                                                                                                                                              |
+| `compact`          | "Compact mode" with square arrows that takes up less space. Defaults to `False`. ~~bool~~                                                                                                                                                     |
+| `color`            | Text color. Can be provided in any CSS legal format as a string e.g.: `"#00ff00"`, `"rgb(0, 255, 0)"`, `"hsl(120, 100%, 50%)"` and `"green"` all correspond to the color green (without transparency). Defaults to `"#000000"`. ~~str~~       |
+| `bg`               | Background color. Can be provided in any CSS legal format as a string e.g.: `"#00ff00"`, `"rgb(0, 255, 0)"`, `"hsl(120, 100%, 50%)"` and `"green"` all correspond to the color green (without transparency). Defaults to `"#ffffff"`. ~~str~~ |
+| `font`             | Font name or font family for all text. Defaults to `"Arial"`. ~~str~~                                                                                                                                                                         |
+| `offset_x`         | Spacing on left side of the SVG in px. Defaults to `50`. ~~int~~                                                                                                                                                                              |
+| `arrow_stroke`     | Width of arrow path in px. Defaults to `2`. ~~int~~                                                                                                                                                                                           |
+| `arrow_width`      | Width of arrow head in px. Defaults to `10` in regular mode and `8` in compact mode. ~~int~~                                                                                                                                                  |
+| `arrow_spacing`    | Spacing between arrows in px to avoid overlaps. Defaults to `20` in regular mode and `12` in compact mode. ~~int~~                                                                                                                            |
+| `word_spacing`     | Vertical spacing between words and arcs in px. Defaults to `45`. ~~int~~                                                                                                                                                                      |
+| `distance`         | Distance between words in px. Defaults to `175` in regular mode and `150` in compact mode. ~~int~~                                                                                                                                            |
 
 #### Named Entity Visualizer options {id="displacy_options-ent"}
 
@@ -466,7 +593,7 @@ factories.
 | `optimizers`      | Registry for functions that create [optimizers](https://thinc.ai/docs/api-optimizers).                                                                                                                                                             |
 | `readers`         | Registry for file and data readers, including training and evaluation data readers like [`Corpus`](/api/corpus).                                                                                                                                   |
 | `schedules`       | Registry for functions that create [schedules](https://thinc.ai/docs/api-schedules).                                                                                                                                                               |
-| `scorers`         | Registry for functions that create scoring methods for user with the [`Scorer`](/api/scorer). Scoring methods are called with `Iterable[Example]` and arbitrary `\*\*kwargs` and return scores as `Dict[str, Any]`.                                |
+| `scorers`         | Registry for functions that create scoring methods for user with the [`Scorer`](/api/scorer). Scoring methods are called with `Iterable[Example]` and arbitrary `**kwargs` and return scores as `Dict[str, Any]`.                                  |
 | `tokenizers`      | Registry for tokenizer factories. Registered functions should return a callback that receives the `nlp` object and returns a [`Tokenizer`](/api/tokenizer) or a custom callable.                                                                   |
 
 ### spacy-transformers registry {id="registry-transformers"}
@@ -577,7 +704,7 @@ start decreasing across epochs.
 > ```ini
 > [training.logger]
 > @loggers = "spacy.ConsoleLogger.v3"
-> progress_bar = "all_steps"
+> progress_bar = "eval"
 > console_output = true
 > output_file = "training_log.jsonl"
 > ```

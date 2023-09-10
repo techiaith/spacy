@@ -83,7 +83,7 @@ consisting of a CNN and a layer-normalized maxout activation function.
 | `width`              | The width of the input and output. These are required to be the same, so that residual connections can be used. Recommended values are `96`, `128` or `300`. ~~int~~                                                                                                          |
 | `depth`              | The number of convolutional layers to use. Recommended values are between `2` and `8`. ~~int~~                                                                                                                                                                                |
 | `embed_size`         | The number of rows in the hash embedding tables. This can be surprisingly small, due to the use of the hash embeddings. Recommended values are between `2000` and `10000`. ~~int~~                                                                                            |
-| `window_size`        | The number of tokens on either side to concatenate during the convolutions. The receptive field of the CNN will be `depth * (window_size * 2 + 1)`, so a 4-layer network with a window size of `2` will be sensitive to 20 words at a time. Recommended value is `1`. ~~int~~ |
+| `window_size`        | The number of tokens on either side to concatenate during the convolutions. The receptive field of the CNN will be `depth * window_size * 2 + 1`, so a 4-layer network with a window size of `2` will be sensitive to 17 words at a time. Recommended value is `1`. ~~int~~ |
 | `maxout_pieces`      | The number of pieces to use in the maxout non-linearity. If `1`, the [`Mish`](https://thinc.ai/docs/api-layers#mish) non-linearity is used instead. Recommended values are `1`-`3`. ~~int~~                                                                                   |
 | `subword_features`   | Whether to also embed subword features, specifically the prefix, suffix and word shape. This is recommended for alphabetic languages like English, but not if single-character tokens are used for a language such as Chinese. ~~bool~~                                       |
 | `pretrained_vectors` | Whether to also use static vectors. ~~bool~~                                                                                                                                                                                                                                  |
@@ -303,7 +303,7 @@ mapped to a zero vector. See the documentation on
 | `nM`        | The width of the static vectors. ~~Optional[int]~~                                                                                                                                                                      |
 | `dropout`   | Optional dropout rate. If set, it's applied per dimension over the whole batch. Defaults to `None`. ~~Optional[float]~~                                                                                                 |
 | `init_W`    | The [initialization function](https://thinc.ai/docs/api-initializers). Defaults to [`glorot_uniform_init`](https://thinc.ai/docs/api-initializers#glorot_uniform_init). ~~Callable[[Ops, Tuple[int, ...]]], FloatsXd]~~ |
-| `key_attr`  | Defaults to `"ORTH"`. ~~str~~                                                                                                                                                                                           |
+| `key_attr`  | This setting is ignored in spaCy v3.6+. To set a custom key attribute for vectors, configure it through [`Vectors`](/api/vectors) or [`spacy init vectors`](/api/cli#init-vectors). Defaults to `"ORTH"`. ~~str~~       |
 | **CREATES** | The model using the architecture. ~~Model[List[Doc], Ragged]~~                                                                                                                                                          |
 
 ### spacy.FeatureExtractor.v1 {id="FeatureExtractor"}
@@ -899,14 +899,20 @@ The `EntityLinker` model architecture is a Thinc `Model` with a
 | `nO`        | Output dimension, determined by the length of the vectors encoding each entity in the KB. If the `nO` dimension is not set, the entity linking component will set it when `initialize` is called. ~~Optional[int]~~ |
 | **CREATES** | The model using the architecture. ~~Model[List[Doc], Floats2d]~~                                                                                                                                                    |
 
-### spacy.EmptyKB.v1 {id="EmptyKB"}
+### spacy.EmptyKB.v1 {id="EmptyKB.v1"}
 
 A function that creates an empty `KnowledgeBase` from a [`Vocab`](/api/vocab)
-instance. This is the default when a new entity linker component is created.
+instance.
 
 | Name                   | Description                                                                         |
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | `entity_vector_length` | The length of the vectors encoding each entity in the KB. Defaults to `64`. ~~int~~ |
+
+### spacy.EmptyKB.v2 {id="EmptyKB"}
+
+A function that creates an empty `KnowledgeBase` from a [`Vocab`](/api/vocab)
+instance. This is the default when a new entity linker component is created. It
+returns a `Callable[[Vocab, int], InMemoryLookupKB]`.
 
 ### spacy.KBFromFile.v1 {id="KBFromFile"}
 
@@ -923,6 +929,15 @@ A function that takes as input a [`KnowledgeBase`](/api/kb) and a
 plausible [`Candidate`](/api/kb/#candidate) objects. The default
 `CandidateGenerator` uses the text of a mention to find its potential aliases in
 the `KnowledgeBase`. Note that this function is case-dependent.
+
+### spacy.CandidateBatchGenerator.v1 {id="CandidateBatchGenerator"}
+
+A function that takes as input a [`KnowledgeBase`](/api/kb) and an `Iterable` of
+[`Span`](/api/span) objects denoting named entities, and returns a list of
+plausible [`Candidate`](/api/kb/#candidate) objects per specified
+[`Span`](/api/span). The default `CandidateBatchGenerator` uses the text of a
+mention to find its potential aliases in the `KnowledgeBase`. Note that this
+function is case-dependent.
 
 ## Coreference {id="coref-architectures",tag="experimental"}
 

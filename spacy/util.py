@@ -1,37 +1,62 @@
-from typing import List, Mapping, NoReturn, Union, Dict, Any, Set, cast
-from typing import Optional, Iterable, Callable, Tuple, Type
-from typing import Iterator, Pattern, Generator, TYPE_CHECKING
-from types import ModuleType
-import os
+import functools
 import importlib
 import importlib.util
-import re
-from pathlib import Path
-import thinc
-from thinc.api import NumpyOps, get_current_ops, Adam, Config, Optimizer
-from thinc.api import ConfigValidationError, Model
-import functools
+import inspect
 import itertools
+import logging
+import os
+import pkgutil
+import re
+import shlex
+import shutil
+import socket
+import stat
+import subprocess
+import sys
+import tempfile
+import warnings
+from collections import defaultdict
+from contextlib import contextmanager
+from pathlib import Path
+from types import ModuleType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Pattern,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
+
+import catalogue
+import langcodes
 import numpy
 import srsly
-import catalogue
-from catalogue import RegistryError, Registry
-import langcodes
-import sys
-import warnings
-from packaging.specifiers import SpecifierSet, InvalidSpecifier
-from packaging.version import Version, InvalidVersion
+import thinc
+from catalogue import Registry, RegistryError
 from packaging.requirements import Requirement
-import subprocess
-from contextlib import contextmanager
-from collections import defaultdict
-import tempfile
-import shutil
-import shlex
-import inspect
-import pkgutil
-import logging
-import socket
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.version import InvalidVersion, Version
+from thinc.api import (
+    Adam,
+    Config,
+    ConfigValidationError,
+    Model,
+    NumpyOps,
+    Optimizer,
+    get_current_ops,
+)
 
 try:
     import cupy.random
@@ -42,13 +67,12 @@ except ImportError:
 # and have since moved to Thinc. We're importing them here so people's code
 # doesn't break, but they should always be imported from Thinc from now on,
 # not from spacy.util.
-from thinc.api import fix_random_seed, compounding, decaying  # noqa: F401
+from thinc.api import compounding, decaying, fix_random_seed  # noqa: F401
 
-
-from .symbols import ORTH
-from .compat import cupy, CudaStream, is_windows, importlib_metadata
-from .errors import Errors, Warnings, OLD_MODEL_SHORTCUTS
 from . import about
+from .compat import CudaStream, cupy, importlib_metadata, is_windows
+from .errors import OLD_MODEL_SHORTCUTS, Errors, Warnings
+from .symbols import ORTH
 
 if TYPE_CHECKING:
     # This lets us add type hints for mypy etc. without causing circular imports
@@ -510,7 +534,7 @@ def load_model_from_path(
     if not meta:
         meta = get_model_meta(model_path)
     config_path = model_path / "config.cfg"
-    overrides = dict_to_dot(config)
+    overrides = dict_to_dot(config, for_overrides=True)
     config = load_config(config_path, overrides=overrides)
     nlp = load_model_from_config(
         config,
@@ -870,7 +894,7 @@ def load_meta(path: Union[str, Path]) -> Dict[str, Any]:
     if "spacy_version" in meta:
         if not is_compatible_version(about.__version__, meta["spacy_version"]):
             lower_version = get_model_lower_version(meta["spacy_version"])
-            lower_version = get_minor_version(lower_version)  # type: ignore[arg-type]
+            lower_version = get_base_version(lower_version)  # type: ignore[arg-type]
             if lower_version is not None:
                 lower_version = "v" + lower_version
             elif "spacy_git_version" in meta:
@@ -1050,8 +1074,15 @@ def make_tempdir() -> Generator[Path, None, None]:
     """
     d = Path(tempfile.mkdtemp())
     yield d
+
+    # On Windows, git clones use read-only files, which cause permission errors
+    # when being deleted. This forcibly fixes permissions.
+    def force_remove(rmfunc, path, ex):
+        os.chmod(path, stat.S_IWRITE)
+        rmfunc(path)
+
     try:
-        shutil.rmtree(str(d))
+        shutil.rmtree(str(d), onerror=force_remove)
     except PermissionError as e:
         warnings.warn(Warnings.W091.format(dir=d, msg=e))
 
@@ -1471,14 +1502,19 @@ def dot_to_dict(values: Dict[str, Any]) -> Dict[str, dict]:
     return result
 
 
-def dict_to_dot(obj: Dict[str, dict]) -> Dict[str, Any]:
+def dict_to_dot(obj: Dict[str, dict], *, for_overrides: bool = False) -> Dict[str, Any]:
     """Convert dot notation to a dict. For example: {"token": {"pos": True,
     "_": {"xyz": True }}} becomes {"token.pos": True, "token._.xyz": True}.
 
-    values (Dict[str, dict]): The dict to convert.
+    obj (Dict[str, dict]): The dict to convert.
+    for_overrides (bool): Whether to enable special handling for registered
+        functions in overrides.
     RETURNS (Dict[str, Any]): The key/value pairs.
     """
-    return {".".join(key): value for key, value in walk_dict(obj)}
+    return {
+        ".".join(key): value
+        for key, value in walk_dict(obj, for_overrides=for_overrides)
+    }
 
 
 def dot_to_object(config: Config, section: str):
@@ -1520,13 +1556,20 @@ def set_dot_to_object(config: Config, section: str, value: Any) -> None:
 
 
 def walk_dict(
-    node: Dict[str, Any], parent: List[str] = []
+    node: Dict[str, Any], parent: List[str] = [], *, for_overrides: bool = False
 ) -> Iterator[Tuple[List[str], Any]]:
-    """Walk a dict and yield the path and values of the leaves."""
+    """Walk a dict and yield the path and values of the leaves.
+
+    for_overrides (bool): Whether to treat registered functions that start with
+        @ as final values rather than dicts to traverse.
+    """
     for key, value in node.items():
         key_parent = [*parent, key]
-        if isinstance(value, dict):
-            yield from walk_dict(value, key_parent)
+        if isinstance(value, dict) and (
+            not for_overrides
+            or not any(value_key.startswith("@") for value_key in value)
+        ):
+            yield from walk_dict(value, key_parent, for_overrides=for_overrides)
         else:
             yield (key_parent, value)
 
