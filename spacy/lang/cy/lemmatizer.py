@@ -21,8 +21,8 @@ class WelshLemmatizer(Lemmatizer):
                 "lemma_lookup_pron",
                 "lemma_lookup_propn",
                 "lemma_lookup_verb",
-                #"lemma_lookup_other",
-                #"lemma_lookup",
+                # "lemma_lookup_other",
+                # "lemma_lookup",
             ]
             return (required, [])
         else:
@@ -48,10 +48,10 @@ class WelshLemmatizer(Lemmatizer):
                 return self.lemmatize_adj(string, univ_pos, lookup_table)
             else:
                 lemma = lookup_table.get(string, "")
-        #if not lemma:
+        # if not lemma:
         #    lookup_table = self.lookups.get_table("lemma_lookup_other")
         #    lemma = lookup_table.get(string, "")
-        #if not lemma:
+        # if not lemma:
         #    lookup_table = self.lookups.get_table(
         #        "lemma_lookup"
         #    )  # "legacy" lookup table
@@ -59,9 +59,7 @@ class WelshLemmatizer(Lemmatizer):
         if not lemma:
             lemma = token.text
         return [lemma]
-        
-        
-        
+
     def lemmatize_det(
         self, string: str, univ_pos: str, lookup_table: Dict[str, str]
     ) -> List[str]:

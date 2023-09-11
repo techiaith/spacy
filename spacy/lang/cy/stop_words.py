@@ -37,56 +37,53 @@ ADVS = {
 }
 
 AUXS = {
-	"bod",
-	"byddaf",
-	"mae",
-	"sy",
-	"sydd",
-	"ydwyf",
+    "bod",
+    "byddaf",
+    "mae",
+    "sy",
+    "sydd",
+    "ydwyf",
     "yw",
 }
 
 # Careful! Can also mean 'an age', 'a stone'
 AMBIGS = {
-	"maen",
+    "maen",
     "oes",
 }
 
 CONJS = {
-	"ac",
-	"fel",
-	"neu",
-	"ond",
-	"os",
-	"tra",
+    "ac",
+    "fel",
+    "neu",
+    "ond",
+    "os",
+    "tra",
     "a",
 }
 
 DETS = {
-	"'r",
-	"yr",
+    "'r",
+    "yr",
     "y",
 }
 
-NOUNS = {
-    "ôl",
-    "tu"
-}
+NOUNS = {"ôl", "tu"}
 
 PARTS = {
-	"nid",
-	"nis",
+    "nid",
+    "nis",
     "na",
 }
 
 PRONS = {
-	"hi",
-	"hun",
-	"hyn",
-	"i",
-	"nhw",
-	"ni",
-	"pob",
+    "hi",
+    "hun",
+    "hyn",
+    "i",
+    "nhw",
+    "ni",
+    "pob",
     "di",
     "dy",
     "ef",
@@ -95,7 +92,7 @@ PRONS = {
     "ein",
     "fe",
     "fy",
-    "hwy"
+    "hwy",
 }
 
 STOP_WORDS = set(ADPS | ADVS | AUXS | AMBIGS | CONJS | DETS | NOUNS | PARTS | PRONS)

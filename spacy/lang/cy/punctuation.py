@@ -11,6 +11,7 @@ def _fixes(seq: List[str]):
     upper_curly = list(map(str.upper, lower_curly))
     return lowers + uppers + lower_curly + upper_curly
 
+
 # isod ddim yn cydio
 _prefixes = _fixes(["f'", "d'"])
 

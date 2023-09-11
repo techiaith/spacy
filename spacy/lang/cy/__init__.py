@@ -4,11 +4,7 @@ from thinc.api import Config, Model
 from ...language import BaseDefaults, Language
 from .lemmatizer import WelshLemmatizer
 from .lex_attrs import LEX_ATTRS
-from .punctuation import (
-    TOKENIZER_INFIXES,
-    TOKENIZER_PREFIXES,
-    TOKENIZER_SUFFIXES
-)
+from .punctuation import TOKENIZER_INFIXES, TOKENIZER_PREFIXES, TOKENIZER_SUFFIXES
 from .stop_words import STOP_WORDS
 from .tokenizer_exceptions import TOKENIZER_EXCEPTIONS
 
